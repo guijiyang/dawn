@@ -140,3 +140,11 @@ lcov.info
 all_findings.json
 
 tint.dot
+
+# clangd cache
+.cache/
+
+# cmakebuild dir ignore
+cmakebuild/
+!./cmakebuild/include/
+!./cmakebuild/gen/
