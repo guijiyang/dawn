@@ -41,6 +41,7 @@ endif()
 
 target_sources(dawn_native
   INTERFACE
+    "${DAWN_BUILD_GEN_DIR}/include/dawn/webgpu.h"
     "${DAWN_INCLUDE_DIR}/dawn/native/DawnNative.h"
     "${DAWN_INCLUDE_DIR}/dawn/native/dawn_native_export.h"
   PRIVATE
