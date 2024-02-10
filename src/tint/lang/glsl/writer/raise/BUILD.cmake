@@ -34,9 +34,11 @@
 #                       Do not modify this file directly
 ################################################################################
 
+if(TINT_BUILD_GLSL_WRITER)
 ################################################################################
 # Target:    tint_lang_glsl_writer_raise
 # Kind:      lib
+# Condition: TINT_BUILD_GLSL_WRITER
 ################################################################################
 tint_add_target(tint_lang_glsl_writer_raise lib
   lang/glsl/writer/raise/raise.cc
@@ -55,3 +57,5 @@ tint_target_add_dependencies(tint_lang_glsl_writer_raise lib
   tint_utils_text
   tint_utils_traits
 )
+
+endif(TINT_BUILD_GLSL_WRITER)
