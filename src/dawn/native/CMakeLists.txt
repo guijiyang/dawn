@@ -41,7 +41,6 @@ endif()
 
 target_sources(dawn_native
   INTERFACE
-    "${DAWN_BUILD_GEN_DIR}/include/dawn/webgpu.h"
     "${DAWN_INCLUDE_DIR}/dawn/native/DawnNative.h"
     "${DAWN_INCLUDE_DIR}/dawn/native/dawn_native_export.h"
   PRIVATE
@@ -761,6 +760,8 @@ DawnJSONGenerator(
     RESULT_VARIABLE "WEBGPU_DAWN_NATIVE_PROC_GEN"
 )
 
+if(NOT BUILD_SHARED_LIBS)
+message("WEBGPU_DAWN_NATIVE_PROC_GEN : ${WEBGPU_DAWN_NATIVE_PROC_GEN}")
 add_library(webgpu_dawn ${DAWN_PLACEHOLDER_FILE})
 common_compile_options(webgpu_dawn)
 target_link_libraries(webgpu_dawn PRIVATE dawn_native)
@@ -771,5 +772,15 @@ if(BUILD_SHARED_LIBS)
 endif()
 target_sources(webgpu_dawn PRIVATE ${WEBGPU_DAWN_NATIVE_PROC_GEN})
 
-install_if_enabled(dawn_native)
 install_if_enabled(webgpu_dawn)
+endif()
+install_if_enabled(dawn_native)
+
+add_library(dawn_install_header INTERFACE )
+target_sources(dawn_install_header INTERFACE 
+"${DAWN_BUILD_GEN_DIR}/include/dawn/webgpu.h"
+    "${DAWN_BUILD_GEN_DIR}/include/dawn/dawn_proc_table.h"
+    "${DAWN_BUILD_GEN_DIR}/include/dawn/webgpu_cpp.h"
+    "${DAWN_BUILD_GEN_DIR}/include/webgpu/webgpu_cpp_chained_struct.h")
+
+install_if_enabled(dawn_install_header)
