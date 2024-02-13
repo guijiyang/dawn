@@ -172,7 +172,7 @@ deps = {
   },
 
   'third_party/angle': {
-    'url': '{chromium_git}/angle/angle@eaddd3baa5edcad015601e7be6e2aa004f5afca7',
+    'url': '{chromium_git}/angle/angle@cb7d3cc206d6a4165c0012d78387b714b55a0556',
     'condition': 'dawn_standalone',
   },
 
@@ -182,7 +182,7 @@ deps = {
   },
 
   'third_party/vulkan-deps': {
-    'url': '{chromium_git}/vulkan-deps@6c7bb72d35e0d9ccd702baf410b112d292a4a380',
+    'url': '{chromium_git}/vulkan-deps@c23644b65575a38051833bc1b53f41add2d77199',
     'condition': 'dawn_standalone',
   },
 
@@ -197,7 +197,7 @@ deps = {
   },
 
   'third_party/dxc': {
-    'url': '{chromium_git}/external/github.com/microsoft/DirectXShaderCompiler@afedfff5c1b6ad3f87ffbae273a825034c670633',
+    'url': '{chromium_git}/external/github.com/microsoft/DirectXShaderCompiler@627e400dea0b76c28a2f209110ce49162c41b9e2',
   },
 
   'third_party/dxheaders': {

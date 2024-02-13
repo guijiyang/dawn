@@ -1,4 +1,4 @@
-// Copyright 2017 The Dawn & Tint Authors
+// Copyright 2024 The Dawn & Tint Authors
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
@@ -25,34 +25,32 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#include "dawn/native/opengl/ComputePipelineGL.h"
+#include "src/tint/lang/spirv/type/sampled_image.h"
 
-#include "dawn/native/opengl/DeviceGL.h"
+#include <gtest/gtest.h>
 
-namespace dawn::native::opengl {
+#include "src/tint/lang/core/type/i32.h"
+#include "src/tint/lang/core/type/u32.h"
 
-// static
-Ref<ComputePipeline> ComputePipeline::CreateUninitialized(
-    Device* device,
-    const UnpackedPtr<ComputePipelineDescriptor>& descriptor) {
-    return AcquireRef(new ComputePipeline(device, descriptor));
+namespace tint::spirv::type {
+namespace {
+
+TEST(SampledImageTest, Equals) {
+    core::type::I32 i32;
+    core::type::U32 u32;
+    SampledImage a{&i32};
+    SampledImage b{&i32};
+    SampledImage c{&u32};
+
+    EXPECT_TRUE(a.Equals(b));
+    EXPECT_FALSE(a.Equals(c));
 }
 
-ComputePipeline::~ComputePipeline() = default;
-
-void ComputePipeline::DestroyImpl() {
-    ComputePipelineBase::DestroyImpl();
-    DeleteProgram(ToBackend(GetDevice())->GetGL());
+TEST(SampledImageTest, FriendlyName) {
+    core::type::I32 i32;
+    SampledImage s{&i32};
+    EXPECT_EQ(s.FriendlyName(), "spirv.sampled_image<i32>");
 }
 
-MaybeError ComputePipeline::InitializeImpl() {
-    DAWN_TRY(InitializeBase(ToBackend(GetDevice())->GetGL(), ToBackend(GetLayout()), GetAllStages(),
-                            /* usesInstanceIndex */ false, /* usesFragDepth */ false));
-    return {};
-}
-
-void ComputePipeline::ApplyNow() {
-    PipelineGL::ApplyNow(ToBackend(GetDevice())->GetGL());
-}
-
-}  // namespace dawn::native::opengl
+}  // namespace
+}  // namespace tint::spirv::type
