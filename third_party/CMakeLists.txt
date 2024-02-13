@@ -76,7 +76,11 @@ endif()
 
 if(NOT TARGET glslang AND (${TINT_BUILD_GLSL_WRITER} OR ${TINT_BUILD_GLSL_VALIDATOR}) AND ${TINT_BUILD_CMD_TOOLS})
     set(SKIP_GLSLANG_INSTALL ON CACHE BOOL "" FORCE)
+    # glslang-default-resource-limits can't be build as shared library
+    set(BUILD_SHARED_LIBS_SAVED ${BUILD_SHARED_LIBS})
+    set(BUILD_SHARED_LIBS 0)
     add_subdirectory("${DAWN_THIRD_PARTY_DIR}/vulkan-deps/glslang/src" "${CMAKE_CURRENT_BINARY_DIR}/glslang" EXCLUDE_FROM_ALL)
+    set(BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS_SAVED})
 endif()
 
 if (NOT TARGET glfw AND DAWN_USE_GLFW)
