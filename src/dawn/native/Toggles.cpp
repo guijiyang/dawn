@@ -224,7 +224,12 @@ static constexpr ToggleEnumAndInfoList kToggleNameAndInfoList = {{
       "https://crbug.com/dawn/1016", ToggleStage::Device}},
     {Toggle::UseUserDefinedLabelsInBackend,
      {"use_user_defined_labels_in_backend",
-      "Enables calls to SetLabel to be forwarded to backend-specific APIs that label objects.",
+      "Enables setting labels on backend-specific APIs that label objects. The labels used will be "
+      "those of the corresponding frontend objects if non-empty and default labels otherwise. "
+      "Defaults to false. NOTE: On Vulkan, backend labels are currently always set (with default "
+      "labels if this toggle is not set). The reason is that Dawn currently uses backend "
+      "object labels on Vulkan to map errors back to the device with which the backend objects "
+      "included in the error are associated.",
       "https://crbug.com/dawn/840", ToggleStage::Device}},
     {Toggle::UsePlaceholderFragmentInVertexOnlyPipeline,
      {"use_placeholder_fragment_in_vertex_only_pipeline",
@@ -389,6 +394,12 @@ static constexpr ToggleEnumAndInfoList kToggleNameAndInfoList = {{
       "texture. Works around an issue where stencil writes by copy commands are not visible "
       "to a render or compute pass.",
       "https://crbug.com/dawn/1389", ToggleStage::Device}},
+    {Toggle::UseBlitForStencilTextureWrite,
+     {"use_blit_for_stencil_texture_write",
+      "Use a blit instead of a write texture command to upload data to the stencil aspect of a "
+      "texture. Works around for OpenGLES when glTexSubImage doesn't support GL_STENCIL_INDEX, "
+      "and when the texture format is depth-stencil-combined.",
+      "https://crbug.com/dawn/2391", ToggleStage::Device}},
     {Toggle::UseBlitForDepthTextureToTextureCopyToNonzeroSubresource,
      {"use_blit_for_depth_texture_to_texture_copy_to_nonzero_subresource",
       "Use a blit to copy from a depth texture to the nonzero subresource of a depth texture. "

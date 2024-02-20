@@ -296,6 +296,8 @@ class DeviceBase : public RefCountedWithExternalCount {
         const RenderBundleEncoderDescriptor* descriptor);
     RenderPipelineBase* APICreateRenderPipeline(const RenderPipelineDescriptor* descriptor);
     ExternalTextureBase* APICreateExternalTexture(const ExternalTextureDescriptor* descriptor);
+    SharedBufferMemoryBase* APIImportSharedBufferMemory(
+        const SharedBufferMemoryDescriptor* descriptor);
     SharedTextureMemoryBase* APIImportSharedTextureMemory(
         const SharedTextureMemoryDescriptor* descriptor);
     SharedFenceBase* APIImportSharedFence(const SharedFenceDescriptor* descriptor);
@@ -425,10 +427,6 @@ class DeviceBase : public RefCountedWithExternalCount {
     CallbackTaskManager* GetCallbackTaskManager() const;
     dawn::platform::WorkerTaskPool* GetWorkerTaskPool() const;
 
-    Ref<ComputePipelineBase> AddOrGetCachedComputePipeline(
-        Ref<ComputePipelineBase> computePipeline);
-    Ref<RenderPipelineBase> AddOrGetCachedRenderPipeline(Ref<RenderPipelineBase> renderPipeline);
-
     // Enqueue a successfully-create async pipeline creation callback.
     void AddComputePipelineAsyncCallbackTask(Ref<ComputePipelineBase> pipeline,
                                              WGPUCreateComputePipelineAsyncCallback callback,
@@ -519,6 +517,8 @@ class DeviceBase : public RefCountedWithExternalCount {
         const UnpackedPtr<RenderPipelineDescriptor>& descriptor) = 0;
     virtual ResultOrError<Ref<SharedTextureMemoryBase>> ImportSharedTextureMemoryImpl(
         const SharedTextureMemoryDescriptor* descriptor);
+    virtual ResultOrError<Ref<SharedBufferMemoryBase>> ImportSharedBufferMemoryImpl(
+        const SharedBufferMemoryDescriptor* descriptor);
     virtual ResultOrError<Ref<SharedFenceBase>> ImportSharedFenceImpl(
         const SharedFenceDescriptor* descriptor);
     virtual void SetLabelImpl();
@@ -536,6 +536,9 @@ class DeviceBase : public RefCountedWithExternalCount {
         ComputePipelineBase* uninitializedComputePipeline);
     Ref<RenderPipelineBase> GetCachedRenderPipeline(
         RenderPipelineBase* uninitializedRenderPipeline);
+    Ref<ComputePipelineBase> AddOrGetCachedComputePipeline(
+        Ref<ComputePipelineBase> computePipeline);
+    Ref<RenderPipelineBase> AddOrGetCachedRenderPipeline(Ref<RenderPipelineBase> renderPipeline);
     virtual Ref<PipelineCacheBase> GetOrCreatePipelineCacheImpl(const CacheKey& key);
     virtual void InitializeComputePipelineAsyncImpl(Ref<ComputePipelineBase> computePipeline,
                                                     WGPUCreateComputePipelineAsyncCallback callback,
