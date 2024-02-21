@@ -184,7 +184,7 @@ function(tint_spvheaders_compile_options TARGET)
 endfunction()
 
 function(tint_spvtools_compile_options TARGET)
-  target_link_libraries(${TARGET} PRIVATE SPIRV-Tools)
+  target_link_libraries(${TARGET} PRIVATE ${SPIRV_TOOLS})
   target_include_directories(${TARGET} PRIVATE "${TINT_SPIRV_TOOLS_DIR}/include")
 endfunction()
 

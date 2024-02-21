@@ -148,3 +148,6 @@ tint.dot
 cmakebuild/
 !./cmakebuild/include/
 !./cmakebuild/gen/
+
+#xmake cache
+.xmake/
