@@ -48,7 +48,6 @@
 #include "src/tint/lang/hlsl/writer/ast_raise/localize_struct_array_assignment.h"
 #include "src/tint/lang/hlsl/writer/ast_raise/num_workgroups_from_uniform.h"
 #include "src/tint/lang/hlsl/writer/ast_raise/pixel_local.h"
-#include "src/tint/lang/hlsl/writer/ast_raise/remove_continue_in_switch.h"
 #include "src/tint/lang/hlsl/writer/ast_raise/truncate_interstage_variables.h"
 #include "src/tint/lang/hlsl/writer/common/option_helpers.h"
 #include "src/tint/lang/wgsl/ast/call_statement.h"
@@ -67,6 +66,7 @@
 #include "src/tint/lang/wgsl/ast/transform/multiplanar_external_texture.h"
 #include "src/tint/lang/wgsl/ast/transform/promote_initializers_to_let.h"
 #include "src/tint/lang/wgsl/ast/transform/promote_side_effects_to_decl.h"
+#include "src/tint/lang/wgsl/ast/transform/remove_continue_in_switch.h"
 #include "src/tint/lang/wgsl/ast/transform/remove_phonies.h"
 #include "src/tint/lang/wgsl/ast/transform/robustness.h"
 #include "src/tint/lang/wgsl/ast/transform/simplify_pointers.h"
@@ -362,7 +362,7 @@ SanitizedResult Sanitize(const Program& in, const Options& options) {
     manager.Add<CalculateArrayLength>();
     manager.Add<ast::transform::PromoteInitializersToLet>();
 
-    manager.Add<RemoveContinueInSwitch>();
+    manager.Add<ast::transform::RemoveContinueInSwitch>();
 
     manager.Add<ast::transform::AddEmptyEntryPoint>();
 
@@ -693,9 +693,10 @@ bool ASTPrinter::EmitIndexAccessor(StringStream& out, const ast::IndexAccessorEx
     return true;
 }
 
-bool ASTPrinter::EmitBitcast(StringStream& out, const ast::BitcastExpression* expr) {
-    auto* dst_type = TypeOf(expr)->UnwrapRef();
-    auto* src_type = TypeOf(expr->expr)->UnwrapRef();
+bool ASTPrinter::EmitBitcastCall(StringStream& out, const ast::CallExpression* call) {
+    auto* arg = call->args[0];
+    auto* src_type = TypeOf(arg)->UnwrapRef();
+    auto* dst_type = TypeOf(call);
 
     auto* src_el_type = src_type->DeepestElement();
     auto* dst_el_type = dst_type->DeepestElement();
@@ -708,7 +709,7 @@ bool ASTPrinter::EmitBitcast(StringStream& out, const ast::BitcastExpression* ex
 
     // Handle identity bitcast.
     if (src_type == dst_type) {
-        return EmitExpression(out, expr->expr);
+        return EmitExpression(out, arg);
     }
 
     // Handle the f16 types using polyfill functions
@@ -867,7 +868,7 @@ bool ASTPrinter::EmitBitcast(StringStream& out, const ast::BitcastExpression* ex
         out << fn;
         {
             ScopedParen sp(out);
-            if (!EmitExpression(out, expr->expr)) {
+            if (!EmitExpression(out, arg)) {
                 return false;
             }
         }
@@ -882,7 +883,7 @@ bool ASTPrinter::EmitBitcast(StringStream& out, const ast::BitcastExpression* ex
         return false;
     }
     out << "(";
-    if (!EmitExpression(out, expr->expr)) {
+    if (!EmitExpression(out, arg)) {
         return false;
     }
     out << ")";
@@ -1210,6 +1211,9 @@ bool ASTPrinter::EmitBuiltinCall(StringStream& out,
     auto* expr = call->Declaration();
     if (builtin->IsTexture()) {
         return EmitTextureCall(out, call, builtin);
+    }
+    if (type == wgsl::BuiltinFn::kBitcast) {
+        return EmitBitcastCall(out, expr);
     }
     if (type == wgsl::BuiltinFn::kSelect) {
         return EmitSelectCall(out, expr);
@@ -3191,7 +3195,6 @@ bool ASTPrinter::EmitExpression(StringStream& out, const ast::Expression* expr) 
         expr,  //
         [&](const ast::IndexAccessorExpression* a) { return EmitIndexAccessor(out, a); },
         [&](const ast::BinaryExpression* b) { return EmitBinary(out, b); },
-        [&](const ast::BitcastExpression* b) { return EmitBitcast(out, b); },
         [&](const ast::CallExpression* c) { return EmitCall(out, c); },
         [&](const ast::IdentifierExpression* i) { return EmitIdentifier(out, i); },
         [&](const ast::LiteralExpression* l) { return EmitLiteral(out, l); },

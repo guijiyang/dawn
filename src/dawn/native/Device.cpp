@@ -632,7 +632,6 @@ void DeviceBase::HandleError(std::unique_ptr<ErrorData> error,
         type = InternalErrorType::DeviceLost;
     }
 
-    // TODO(lokokung) Update call sites that take the c-string to take string_view.
     const std::string messageStr = error->GetFormattedMessage();
     if (type == InternalErrorType::DeviceLost) {
         // The device was lost, schedule the application callback's executation.
@@ -653,12 +652,12 @@ void DeviceBase::HandleError(std::unique_ptr<ErrorData> error,
         mCallbackTaskManager->HandleDeviceLoss();
 
         // Still forward device loss errors to the error scopes so they all reject.
-        mErrorScopeStack->HandleError(ToWGPUErrorType(type), messageStr.c_str());
+        mErrorScopeStack->HandleError(ToWGPUErrorType(type), messageStr);
     } else {
         // Pass the error to the error scope stack and call the uncaptured error callback
         // if it isn't handled. DeviceLost is not handled here because it should be
         // handled by the lost callback.
-        bool captured = mErrorScopeStack->HandleError(ToWGPUErrorType(type), messageStr.c_str());
+        bool captured = mErrorScopeStack->HandleError(ToWGPUErrorType(type), messageStr);
         if (!captured && mUncapturedErrorCallback != nullptr) {
             mUncapturedErrorCallback(static_cast<WGPUErrorType>(ToWGPUErrorType(type)),
                                      messageStr.c_str(), mUncapturedErrorUserdata);
@@ -1786,13 +1785,18 @@ ResultOrError<Ref<BufferBase>> DeviceBase::CreateBuffer(const BufferDescriptor* 
 
 ResultOrError<Ref<ComputePipelineBase>> DeviceBase::CreateComputePipeline(
     const ComputePipelineDescriptor* descriptor) {
+    // If a pipeline layout is not specified, we cannot use cached pipelines.
+    bool useCache = descriptor->layout != nullptr;
+
     Ref<ComputePipelineBase> uninitializedComputePipeline;
     DAWN_TRY_ASSIGN(uninitializedComputePipeline, CreateUninitializedComputePipeline(descriptor));
 
-    Ref<ComputePipelineBase> cachedComputePipeline =
-        GetCachedComputePipeline(uninitializedComputePipeline.Get());
-    if (cachedComputePipeline.Get() != nullptr) {
-        return cachedComputePipeline;
+    if (useCache) {
+        Ref<ComputePipelineBase> cachedComputePipeline =
+            GetCachedComputePipeline(uninitializedComputePipeline.Get());
+        if (cachedComputePipeline.Get() != nullptr) {
+            return cachedComputePipeline;
+        }
     }
 
     MaybeError maybeError;
@@ -1803,7 +1807,8 @@ ResultOrError<Ref<ComputePipelineBase>> DeviceBase::CreateComputePipeline(
     DAWN_HISTOGRAM_BOOLEAN(GetPlatform(), "CreateComputePipelineSuccess", maybeError.IsSuccess());
 
     DAWN_TRY(std::move(maybeError));
-    return AddOrGetCachedComputePipeline(std::move(uninitializedComputePipeline));
+    return useCache ? AddOrGetCachedComputePipeline(std::move(uninitializedComputePipeline))
+                    : std::move(uninitializedComputePipeline);
 }
 
 ResultOrError<Ref<CommandEncoder>> DeviceBase::CreateCommandEncoder(
@@ -1884,13 +1889,24 @@ void DeviceBase::InitializeRenderPipelineAsyncImpl(Ref<RenderPipelineBase> rende
 }
 
 ResultOrError<Ref<PipelineLayoutBase>> DeviceBase::CreatePipelineLayout(
-    const PipelineLayoutDescriptor* descriptor) {
+    const PipelineLayoutDescriptor* descriptor,
+    PipelineCompatibilityToken pipelineCompatibilityToken) {
     DAWN_TRY(ValidateIsAlive());
     UnpackedPtr<PipelineLayoutDescriptor> unpacked;
     if (IsValidationEnabled()) {
-        DAWN_TRY_ASSIGN(unpacked, ValidatePipelineLayoutDescriptor(this, descriptor));
+        DAWN_TRY_ASSIGN(unpacked, ValidatePipelineLayoutDescriptor(this, descriptor,
+                                                                   pipelineCompatibilityToken));
     } else {
         unpacked = Unpack(descriptor);
+    }
+
+    // When we are not creating explicit pipeline layouts, i.e. we are using 'auto', don't use the
+    // cache.
+    if (pipelineCompatibilityToken != kExplicitPCT) {
+        Ref<PipelineLayoutBase> result;
+        DAWN_TRY_ASSIGN(result, CreatePipelineLayoutImpl(unpacked));
+        result->SetContentHash(result->ComputeContentHash());
+        return result;
     }
     return GetOrCreatePipelineLayout(unpacked);
 }
@@ -1926,13 +1942,18 @@ ResultOrError<Ref<RenderBundleEncoder>> DeviceBase::CreateRenderBundleEncoder(
 
 ResultOrError<Ref<RenderPipelineBase>> DeviceBase::CreateRenderPipeline(
     const RenderPipelineDescriptor* descriptor) {
+    // If a pipeline layout is not specified, we cannot use cached pipelines.
+    bool useCache = descriptor->layout != nullptr;
+
     Ref<RenderPipelineBase> uninitializedRenderPipeline;
     DAWN_TRY_ASSIGN(uninitializedRenderPipeline, CreateUninitializedRenderPipeline(descriptor));
 
-    Ref<RenderPipelineBase> cachedRenderPipeline =
-        GetCachedRenderPipeline(uninitializedRenderPipeline.Get());
-    if (cachedRenderPipeline != nullptr) {
-        return cachedRenderPipeline;
+    if (useCache) {
+        Ref<RenderPipelineBase> cachedRenderPipeline =
+            GetCachedRenderPipeline(uninitializedRenderPipeline.Get());
+        if (cachedRenderPipeline != nullptr) {
+            return cachedRenderPipeline;
+        }
     }
 
     MaybeError maybeError;
@@ -1943,7 +1964,8 @@ ResultOrError<Ref<RenderPipelineBase>> DeviceBase::CreateRenderPipeline(
     DAWN_HISTOGRAM_BOOLEAN(GetPlatform(), "CreateRenderPipelineSuccess", maybeError.IsSuccess());
 
     DAWN_TRY(std::move(maybeError));
-    return AddOrGetCachedRenderPipeline(std::move(uninitializedRenderPipeline));
+    return useCache ? AddOrGetCachedRenderPipeline(std::move(uninitializedRenderPipeline))
+                    : std::move(uninitializedRenderPipeline);
 }
 
 ResultOrError<Ref<RenderPipelineBase>> DeviceBase::CreateUninitializedRenderPipeline(
