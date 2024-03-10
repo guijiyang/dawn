@@ -37,6 +37,8 @@
 #include "src/tint/lang/core/parameter_usage.h"
 #include "src/tint/utils/containers/enum_set.h"
 #include "src/tint/utils/containers/slice.h"
+#include "src/tint/utils/text/styled_text.h"
+#include "src/tint/utils/text/text_style.h"
 
 /// Forward declaration
 namespace tint::core::intrinsic {
@@ -309,10 +311,10 @@ class TemplateState {
     /// @returns true on match or newly defined
     bool Num(size_t idx, Number number) {
         if (idx >= numbers_.Length()) {
-            numbers_.Resize(idx + 1, Number::invalid);
+            numbers_.Resize(idx + 1, Number::any);
         }
         auto& n = numbers_[idx];
-        if (!n.IsValid()) {
+        if (n.IsAny()) {
             n = number.Value();
             return true;
         }
@@ -346,6 +348,16 @@ class TemplateState {
             return Number::invalid;
         }
         return numbers_[idx];
+    }
+
+    /// SetNum replaces the template number with index @p idx with number @p num.
+    /// @param idx the index of the template number
+    /// @param num the new number for the template
+    void SetNum(size_t idx, Number num) {
+        if (idx >= numbers_.Length()) {
+            numbers_.Resize(idx + 1, Number::any);
+        }
+        numbers_[idx] = num;
     }
 
     /// @return the total number of type and number templates
@@ -414,13 +426,13 @@ class MatchState {
     /// @note: The matcher indices are progressed on calling.
     inline Number Num(Number number);
 
-    /// @returns a string representation of the next TypeMatcher from the matcher indices.
+    /// Prints the type matcher representation to @p out
     /// @note: The matcher indices are progressed on calling.
-    inline std::string TypeName();
+    inline void PrintType(StyledText& out);
 
-    /// @returns a string representation of the next NumberMatcher from the matcher indices.
+    /// Prints the number matcher representation to @p out
     /// @note: The matcher indices are progressed on calling.
-    inline std::string NumName();
+    inline void PrintNum(StyledText& out);
 
   private:
     const MatcherIndex* matcher_indices_ = nullptr;
@@ -439,12 +451,12 @@ struct TypeMatcher {
     /// @see #MatchFn
     MatchFn* const match;
 
-    /// Returns a string representation of the matcher.
+    /// Prints the representation of the matcher.
     /// Used for printing error messages when no overload is found.
-    using StringFn = std::string(MatchState* state);
+    using PrintFn = void(MatchState* state, StyledText& out);
 
-    /// @see #StringFn
-    StringFn* const string;
+    /// @see #PrintFn
+    PrintFn* const print;
 };
 
 /// A NumberMatcher is the interface used to match a number or enumerator used
@@ -459,12 +471,12 @@ struct NumberMatcher {
     /// @see #MatchFn
     MatchFn* const match;
 
-    /// Returns a string representation of the matcher.
+    /// Prints the representation of the matcher.
     /// Used for printing error messages when no overload is found.
-    using StringFn = std::string(MatchState* state);
+    using PrintFn = void(MatchState* state, StyledText& out);
 
-    /// @see #StringFn
-    StringFn* const string;
+    /// @see #PrintFn
+    PrintFn* const print;
 };
 
 /// TableData holds the immutable data that holds the intrinsic data for a language.
@@ -600,16 +612,16 @@ Number MatchState::Num(Number number) {
     return matcher.match(*this, number);
 }
 
-std::string MatchState::TypeName() {
+void MatchState::PrintType(StyledText& out) {
     TypeMatcherIndex matcher_index{(*matcher_indices_++).value};
     auto& matcher = data[matcher_index];
-    return matcher.string(this);
+    matcher.print(this, out);
 }
 
-std::string MatchState::NumName() {
+void MatchState::PrintNum(StyledText& out) {
     NumberMatcherIndex matcher_index{(*matcher_indices_++).value};
     auto& matcher = data[matcher_index];
-    return matcher.string(this);
+    matcher.print(this, out);
 }
 
 /// TemplateTypeMatcher is a Matcher for a template type.
@@ -630,9 +642,9 @@ struct TemplateTypeMatcher {
             }
             return nullptr;
         },
-        /* string */
-        [](MatchState* state) -> std::string {
-            return state->data[state->overload.templates + INDEX].name;
+        /* print */
+        [](MatchState* state, StyledText& out) {
+            out << style::Type(state->data[state->overload.templates + INDEX].name);
         },
     };
 };
@@ -651,9 +663,9 @@ struct TemplateNumberMatcher {
             }
             return state.templates.Num(INDEX, number) ? number : Number::invalid;
         },
-        /* string */
-        [](MatchState* state) -> std::string {
-            return state->data[state->overload.templates + INDEX].name;
+        /* print */
+        [](MatchState* state, StyledText& out) {
+            out << style::Variable(state->data[state->overload.templates + INDEX].name);
         },
     };
 };

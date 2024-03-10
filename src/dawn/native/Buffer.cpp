@@ -162,7 +162,6 @@ struct BufferBase::MapAsyncEvent final : public EventManager::TrackedEvent {
           mUserdata(callbackInfo.userdata) {
         TRACE_EVENT_ASYNC_BEGIN0(device->GetPlatform(), General, "Buffer::APIMapAsync",
                                  uint64_t(kBeginningOfGPUTime));
-        CompleteIfSpontaneous();
     }
 
     ~MapAsyncEvent() override { EnsureComplete(EventCompletionType::Shutdown); }
@@ -197,6 +196,7 @@ struct BufferBase::MapAsyncEvent final : public EventManager::TrackedEvent {
                 (*buffer)->mState = BufferState::Mapped;
 
                 pendingMapEvent = std::move((*buffer)->mPendingMapEvent);
+                (*buffer)->mPendingMapFutureID = kNullFutureID;
             }
         });
         mCallback(ToAPI(status), mUserdata);
@@ -206,12 +206,8 @@ struct BufferBase::MapAsyncEvent final : public EventManager::TrackedEvent {
     // This can race with Complete such that the early status is ignored, but this is OK
     // because we will still unmap the buffer. It will be as-if the application called
     // Unmap/Destroy just after the map event completed.
-    // TODO(crbug.com/dawn/831): However, CompleteIfSpontaneous may race with Complete
-    // and hit an ASSERT that it was already completed. This would be resolved when
-    // mapping is thread-safe.
     void UnmapEarly(wgpu::BufferMapAsyncStatus status) {
         mBufferOrEarlyStatus.Use([&](auto bufferOrEarlyStatus) { *bufferOrEarlyStatus = status; });
-        CompleteIfSpontaneous();
     }
 };
 
@@ -594,43 +590,53 @@ Future BufferBase::APIMapAsyncF(wgpu::MapMode mode,
     // (note, not raise a validation error to the device) and return the null future.
     DAWN_ASSERT(callbackInfo.nextInChain == nullptr);
 
-    // Handle the defaulting of size required by WebGPU, even if in webgpu_cpp.h it is not
-    // possible to default the function argument (because there is the callback later in the
-    // argument list)
-    if ((size == wgpu::kWholeMapSize) && (offset <= mSize)) {
-        size = mSize - offset;
-    }
-
-    auto earlyStatus = [&]() -> std::optional<wgpu::BufferMapAsyncStatus> {
-        if (mState == BufferState::PendingMap) {
-            return wgpu::BufferMapAsyncStatus::MappingAlreadyPending;
-        }
-        WGPUBufferMapAsyncStatus status;
-        if (GetDevice()->ConsumedError(ValidateMapAsync(mode, offset, size, &status),
-                                       "calling %s.MapAsync(%s, %u, %u, ...).", this, mode, offset,
-                                       size)) {
-            return static_cast<wgpu::BufferMapAsyncStatus>(status);
-        }
-        if (GetDevice()->ConsumedError(MapAsyncImpl(mode, offset, size))) {
-            return wgpu::BufferMapAsyncStatus::DeviceLost;
-        }
-        return std::nullopt;
-    }();
-
     Ref<EventManager::TrackedEvent> event;
-    if (earlyStatus) {
-        event = AcquireRef(new MapAsyncEvent(GetDevice(), callbackInfo, *earlyStatus));
-    } else {
-        mMapMode = mode;
-        mMapOffset = offset;
-        mMapSize = size;
-        mState = BufferState::PendingMap;
-        mPendingMapEvent =
-            AcquireRef(new MapAsyncEvent(GetDevice(), this, callbackInfo, mLastUsageSerial));
-        event = mPendingMapEvent;
+    std::optional<wgpu::BufferMapAsyncStatus> earlyStatus;
+    {
+        // TODO(crbug.com/dawn/831) Manually acquire device lock instead of relying on code-gen for
+        // re-entrancy.
+        auto deviceLock(GetDevice()->GetScopedLock());
+
+        // Handle the defaulting of size required by WebGPU, even if in webgpu_cpp.h it is not
+        // possible to default the function argument (because there is the callback later in the
+        // argument list)
+        if ((size == wgpu::kWholeMapSize) && (offset <= mSize)) {
+            size = mSize - offset;
+        }
+
+        earlyStatus = [&]() -> std::optional<wgpu::BufferMapAsyncStatus> {
+            if (mState == BufferState::PendingMap) {
+                return wgpu::BufferMapAsyncStatus::MappingAlreadyPending;
+            }
+            WGPUBufferMapAsyncStatus status;
+            if (GetDevice()->ConsumedError(ValidateMapAsync(mode, offset, size, &status),
+                                           "calling %s.MapAsync(%s, %u, %u, ...).", this, mode,
+                                           offset, size)) {
+                return static_cast<wgpu::BufferMapAsyncStatus>(status);
+            }
+            if (GetDevice()->ConsumedError(MapAsyncImpl(mode, offset, size))) {
+                return wgpu::BufferMapAsyncStatus::DeviceLost;
+            }
+            return std::nullopt;
+        }();
+
+        if (earlyStatus) {
+            event = AcquireRef(new MapAsyncEvent(GetDevice(), callbackInfo, *earlyStatus));
+        } else {
+            mMapMode = mode;
+            mMapOffset = offset;
+            mMapSize = size;
+            mState = BufferState::PendingMap;
+            mPendingMapEvent =
+                AcquireRef(new MapAsyncEvent(GetDevice(), this, callbackInfo, mLastUsageSerial));
+            event = mPendingMapEvent;
+        }
     }
 
     FutureID futureID = GetInstance()->GetEventManager()->TrackEvent(std::move(event));
+    if (!earlyStatus) {
+        mPendingMapFutureID = futureID;
+    }
     return {futureID};
 }
 
@@ -704,7 +710,10 @@ void BufferBase::UnmapInternal(WGPUBufferMapAsyncStatus callbackStatus) {
         // state and pending map event needs to be atomic w.r.t. MapAsyncEvent::Complete.
         Ref<MapAsyncEvent> pendingMapEvent = std::move(mPendingMapEvent);
         if (pendingMapEvent != nullptr) {
+            DAWN_ASSERT(mPendingMapFutureID != kNullFutureID);
             pendingMapEvent->UnmapEarly(static_cast<wgpu::BufferMapAsyncStatus>(callbackStatus));
+            GetInstance()->GetEventManager()->SetFutureReady(mPendingMapFutureID);
+            mPendingMapFutureID = kNullFutureID;
         } else {
             GetDevice()->GetCallbackTaskManager()->AddCallbackTask(
                 PrepareMappingCallback(mLastMapID, callbackStatus));

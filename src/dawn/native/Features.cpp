@@ -295,6 +295,15 @@ static constexpr FeatureEnumAndInfo kFeatureInfo[] = {
       "https://dawn.googlesource.com/dawn/+/refs/heads/main/docs/dawn/features/"
       "adapter_properties.md",
       FeatureInfo::FeatureState::Stable}},
+    {Feature::SharedBufferMemoryD3D12Resource,
+     {"Support importing ID3D12Resource as shared buffer memory.",
+      "https://dawn.googlesource.com/dawn/+/refs/heads/main/docs/dawn/features/shared_buffer.md",
+      FeatureInfo::FeatureState::Experimental}},
+    {Feature::R8UnormStorage,
+     {"Supports using r8unorm texture as storage texture.",
+      "https://dawn.googlesource.com/dawn/+/refs/heads/main/docs/dawn/features/"
+      "r8unorm_storage.md",
+      FeatureInfo::FeatureState::Experimental}},
 };
 
 }  // anonymous namespace

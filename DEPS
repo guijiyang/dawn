@@ -57,7 +57,9 @@ vars = {
 
   # 'magic' text to tell depot_tools that git submodules should be accepted
   # but parity with DEPS file is expected.
-  'SUBMODULE_MIGRATION': 'True'
+  'SUBMODULE_MIGRATION': 'True',
+
+  'fetch_cmake': False
 }
 
 deps = {
@@ -95,7 +97,7 @@ deps = {
   },
 
   'third_party/depot_tools': {
-    'url': '{chromium_git}/chromium/tools/depot_tools.git@35a5306635084412e01fa23d64654907f39bc44a',
+    'url': '{chromium_git}/chromium/tools/depot_tools.git@29e08c1737507596dbc222b74a274b53137a23e3',
     'condition': 'dawn_standalone',
   },
 
@@ -177,17 +179,17 @@ deps = {
   },
 
   'third_party/angle': {
-    'url': '{chromium_git}/angle/angle@8c503c1b05b6384639f269532c8a3b4346897cc4',
+    'url': '{chromium_git}/angle/angle@11a2d27f32dd3ad3c59137e7769b543f102a2465',
     'condition': 'dawn_standalone',
   },
 
   'third_party/swiftshader': {
-    'url': '{swiftshader_git}/SwiftShader@eb75201a4e0354a36d315dd01077092ec9aa2356',
+    'url': '{swiftshader_git}/SwiftShader@bbe6452b420c5ddc4b0fd421b0a3ce271262f4ca',
     'condition': 'dawn_standalone',
   },
 
   'third_party/vulkan-deps': {
-    'url': '{chromium_git}/vulkan-deps@445297ea008e4fe1fe49a943bd28f7d0e5304dd7',
+    'url': '{chromium_git}/vulkan-deps@3d5581c920a381474632887e2821124d551b759e',
     'condition': 'dawn_standalone',
   },
 
@@ -202,7 +204,7 @@ deps = {
   },
 
   'third_party/dxc': {
-    'url': '{chromium_git}/external/github.com/microsoft/DirectXShaderCompiler@5e658acc7eec23000f42dfa6fc1090961108c3dc',
+    'url': '{chromium_git}/external/github.com/microsoft/DirectXShaderCompiler@1f162e2230158e8b3d6c70ea31817c1a90a2de22',
   },
 
   'third_party/dxheaders': {
@@ -221,7 +223,7 @@ deps = {
 
   # WebGPU CTS - not used directly by Dawn, only transitively by Chromium.
   'third_party/webgpu-cts': {
-    'url': '{chromium_git}/external/github.com/gpuweb/cts@559c806e5bf504bd103bb7a7a6a30517c52e0c21',
+    'url': '{chromium_git}/external/github.com/gpuweb/cts@561ab2a7cb4a9013d48d086515b882eda2bd14f5',
     'condition': 'build_with_chromium',
   },
 
@@ -248,7 +250,7 @@ deps = {
   },
 
   'tools/cmake': {
-    'condition': 'dawn_node and (host_os == "mac" or host_os == "linux")',
+    'condition': '(fetch_cmake or dawn_node) and (host_os == "mac" or host_os == "linux")',
     'packages': [{
       'package': 'infra/3pp/tools/cmake/${{platform}}',
       'version': Var('dawn_cmake_version'),
@@ -476,7 +478,7 @@ hooks = [
   {
     'name': 'cmake_win32',
     'pattern': '.',
-    'condition': 'dawn_node and host_os == "win"',
+    'condition': '(fetch_cmake or dawn_node) and host_os == "win"',
     'action': [ 'python3',
                 'third_party/depot_tools/download_from_google_storage.py',
                 '--no_resume',
@@ -490,7 +492,7 @@ hooks = [
   {
     'name': 'cmake_win32_extract',
     'pattern': '.',
-    'condition': 'dawn_node and host_os == "win"',
+    'condition': '(fetch_cmake or dawn_node) and host_os == "win"',
     'action': [ 'python3',
                 'scripts/extract.py',
                 'tools/cmake-win32.zip',

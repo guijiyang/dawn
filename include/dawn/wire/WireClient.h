@@ -47,11 +47,6 @@ struct ReservedTexture {
     WGPUTexture texture;
     Handle handle;
     Handle deviceHandle;
-    // TODO(dawn:2021) Remove this once Chromium has been updated.
-    uint32_t id;
-    uint32_t generation;
-    uint32_t deviceId;
-    uint32_t deviceGeneration;
 };
 
 struct ReservedSwapChain {
@@ -85,7 +80,6 @@ class DAWN_WIRE_EXPORT WireClient : public CommandHandler {
     ReservedTexture ReserveTexture(WGPUDevice device, const WGPUTextureDescriptor* descriptor);
     ReservedSwapChain ReserveSwapChain(WGPUDevice device,
                                        const WGPUSwapChainDescriptor* descriptor);
-    ReservedDevice ReserveDevice(WGPUInstance instance);
     ReservedInstance ReserveInstance(const WGPUInstanceDescriptor* descriptor = nullptr);
 
     void ReclaimTextureReservation(const ReservedTexture& reservation);

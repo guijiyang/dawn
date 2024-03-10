@@ -101,11 +101,6 @@ ReservedTexture Client::ReserveTexture(WGPUDevice device, const WGPUTextureDescr
     result.texture = ToAPI(texture);
     result.handle = texture->GetWireHandle();
     result.deviceHandle = FromAPI(device)->GetWireHandle();
-    // TODO(dawn:2021) Remove setting of deprecated fields once Chromium is updated.
-    result.id = texture->GetWireId();
-    result.generation = texture->GetWireGeneration();
-    result.deviceId = FromAPI(device)->GetWireId();
-    result.deviceGeneration = FromAPI(device)->GetWireGeneration();
     return result;
 }
 
@@ -117,15 +112,6 @@ ReservedSwapChain Client::ReserveSwapChain(WGPUDevice device,
     result.swapchain = ToAPI(swapChain);
     result.handle = swapChain->GetWireHandle();
     result.deviceHandle = FromAPI(device)->GetWireHandle();
-    return result;
-}
-
-ReservedDevice Client::ReserveDevice(WGPUInstance instance) {
-    Device* device = Make<Device>(FromAPI(instance)->GetEventManagerHandle(), nullptr);
-
-    ReservedDevice result;
-    result.device = ToAPI(device);
-    result.handle = device->GetWireHandle();
     return result;
 }
 

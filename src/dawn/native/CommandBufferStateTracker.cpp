@@ -100,7 +100,7 @@ using WritableBindingAliasingResult = std::variant<std::monostate, BufferAliasin
 
 template <typename Return>
 Return FindStorageBufferBindingAliasing(const PipelineLayoutBase* pipelineLayout,
-                                        const PerBindGroup<BindGroupBase*>& bindGroups,
+                                        const PerBindGroup<raw_ptr<BindGroupBase>>& bindGroups,
                                         const PerBindGroup<std::vector<uint32_t>>& dynamicOffsets) {
     // If true, returns detailed validation error info. Otherwise simply returns if any binding
     // aliasing is found.
@@ -754,10 +754,13 @@ void CommandBufferStateTracker::SetBindGroup(BindGroupIndex index,
     mAspects.reset(VALIDATION_ASPECT_BIND_GROUPS);
 }
 
-void CommandBufferStateTracker::SetIndexBuffer(wgpu::IndexFormat format, uint64_t size) {
+void CommandBufferStateTracker::SetIndexBuffer(wgpu::IndexFormat format,
+                                               uint64_t offset,
+                                               uint64_t size) {
     mIndexBufferSet = true;
     mIndexFormat = format;
     mIndexBufferSize = size;
+    mIndexBufferOffset = offset;
 }
 
 void CommandBufferStateTracker::UnsetVertexBuffer(VertexBufferSlot slot) {
@@ -815,6 +818,17 @@ wgpu::IndexFormat CommandBufferStateTracker::GetIndexFormat() const {
 
 uint64_t CommandBufferStateTracker::GetIndexBufferSize() const {
     return mIndexBufferSize;
+}
+
+uint64_t CommandBufferStateTracker::GetIndexBufferOffset() const {
+    return mIndexBufferOffset;
+}
+
+void CommandBufferStateTracker::End() {
+    mLastPipelineLayout = nullptr;
+    mLastPipeline = nullptr;
+    mMinBufferSizes = nullptr;
+    mBindgroups.fill(nullptr);
 }
 
 }  // namespace dawn::native
