@@ -33,9 +33,11 @@ add_subdirectory(partition_alloc)
 add_subdirectory(common)
 add_subdirectory(platform)
 add_subdirectory(native)
-add_subdirectory(wire)
+# wire is not build right now 
+# add_subdirectory(wire)
 # TODO(dawn:269): Remove once the implementation-based swapchains are removed.
-add_subdirectory(utils)
+# utils is not build right now
+# add_subdirectory(utils)
 add_subdirectory(glfw)
 add_subdirectory(tests/benchmarks)
 
