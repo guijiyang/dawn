@@ -129,5 +129,9 @@ target_link_libraries(dawn_common
     PRIVATE dawn_internal_config
 )
 
+if(ANDROID)
+    target_link_libraries(dawn_common PRIVATE log)
+endif(ANDROID)
+
 # TODO Android Log support
 # TODO Vulkan headers support
