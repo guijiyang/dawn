@@ -164,7 +164,7 @@ class Device final : public DeviceBase {
     ResultOrError<Ref<SwapChainBase>> CreateSwapChainImpl(
         Surface* surface,
         SwapChainBase* previousSwapChain,
-        const SwapChainDescriptor* descriptor) override;
+        const SurfaceConfiguration* config) override;
     ResultOrError<Ref<TextureBase>> CreateTextureImpl(
         const UnpackedPtr<TextureDescriptor>& descriptor) override;
     ResultOrError<Ref<TextureViewBase>> CreateTextureViewImpl(
@@ -194,6 +194,9 @@ class PhysicalDevice : public PhysicalDeviceBase {
 
     bool SupportsFeatureLevel(FeatureLevel featureLevel) const override;
 
+    ResultOrError<PhysicalDeviceSurfaceCapabilities> GetSurfaceCapabilities(
+        const Surface* surface) const override;
+
     // Used for the tests that intend to use an adapter without all features enabled.
     using PhysicalDeviceBase::SetSupportedFeaturesForTesting;
 
@@ -222,8 +225,7 @@ class BindGroupDataHolder {
     explicit BindGroupDataHolder(size_t size);
     ~BindGroupDataHolder();
 
-    // TODO(https://crbug.com/dawn/2349): Investigate DanglingUntriaged in dawn/native.
-    raw_ptr<void, DanglingUntriaged> mBindingDataAllocation;
+    raw_ptr<void> mBindingDataAllocation;
 };
 
 // We don't have the complexity of placement-allocation of bind group data in
@@ -322,7 +324,7 @@ class SwapChain final : public SwapChainBase {
     static ResultOrError<Ref<SwapChain>> Create(Device* device,
                                                 Surface* surface,
                                                 SwapChainBase* previousSwapChain,
-                                                const SwapChainDescriptor* descriptor);
+                                                const SurfaceConfiguration* config);
     ~SwapChain() override;
 
   private:
@@ -332,7 +334,7 @@ class SwapChain final : public SwapChainBase {
     Ref<Texture> mTexture;
 
     MaybeError PresentImpl() override;
-    ResultOrError<Ref<TextureBase>> GetCurrentTextureImpl() override;
+    ResultOrError<SwapChainTextureInfo> GetCurrentTextureImpl() override;
     void DetachFromSurfaceImpl() override;
 };
 

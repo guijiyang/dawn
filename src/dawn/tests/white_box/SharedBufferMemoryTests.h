@@ -1,4 +1,4 @@
-// Copyright 2021 The Dawn & Tint Authors
+// Copyright 2024 The Dawn & Tint Authors
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
@@ -25,28 +25,39 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-#ifndef SRC_DAWN_TESTS_UNITTESTS_NATIVE_MOCKS_SWAPCHAINMOCK_H_
-#define SRC_DAWN_TESTS_UNITTESTS_NATIVE_MOCKS_SWAPCHAINMOCK_H_
+#ifndef SRC_DAWN_TESTS_WHITE_BOX_SHAREDBUFFERMEMORYTESTS_H_
+#define SRC_DAWN_TESTS_WHITE_BOX_SHAREDBUFFERMEMORYTESTS_H_
 
-#include "gmock/gmock.h"
+#include <gtest/gtest.h>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
 
-#include "dawn/native/Device.h"
-#include "dawn/native/SwapChain.h"
+#include "dawn/tests/DawnTest.h"
 
-namespace dawn::native {
+namespace dawn {
 
-class SwapChainMock : public SwapChainBase {
+class SharedBufferMemoryTestBackend {
   public:
-    SwapChainMock(DeviceBase* device, Surface* surface, const SurfaceConfiguration* config);
-    ~SwapChainMock() override;
+    virtual void SetUp() {}
+    virtual void TearDown() {}
 
-    MOCK_METHOD(void, DestroyImpl, (), (override));
+    // The required features for testing this backend.
+    virtual std::vector<wgpu::FeatureName> RequiredFeatures(const wgpu::Adapter& device) const = 0;
 
-    MOCK_METHOD(ResultOrError<SwapChainTextureInfo>, GetCurrentTextureImpl, (), (override));
-    MOCK_METHOD(MaybeError, PresentImpl, (), (override));
-    MOCK_METHOD(void, DetachFromSurfaceImpl, (), (override));
+    // Create one basic shared buffer memory. It should support most operations.
+    virtual wgpu::SharedBufferMemory CreateSharedBufferMemory(const wgpu::Device& device) = 0;
 };
 
-}  // namespace dawn::native
+using Backend = SharedBufferMemoryTestBackend*;
+DAWN_TEST_PARAM_STRUCT(SharedBufferMemoryTestParams, Backend);
 
-#endif  // SRC_DAWN_TESTS_UNITTESTS_NATIVE_MOCKS_SWAPCHAINMOCK_H_
+class SharedBufferMemoryTests : public DawnTestWithParams<SharedBufferMemoryTestParams> {
+  public:
+    void SetUp() override;
+    std::vector<wgpu::FeatureName> GetRequiredFeatures() override;
+};
+}  // namespace dawn
+
+#endif  // SRC_DAWN_TESTS_WHITE_BOX_SHAREDBUFFERMEMORYTESTS_H_

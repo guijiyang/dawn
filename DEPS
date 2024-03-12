@@ -97,7 +97,7 @@ deps = {
   },
 
   'third_party/depot_tools': {
-    'url': '{chromium_git}/chromium/tools/depot_tools.git@29e08c1737507596dbc222b74a274b53137a23e3',
+    'url': '{chromium_git}/chromium/tools/depot_tools.git@6ec5a9ab6086ec6f043cd7aab1f1744eb58b17f7',
     'condition': 'dawn_standalone',
   },
 
@@ -179,7 +179,7 @@ deps = {
   },
 
   'third_party/angle': {
-    'url': '{chromium_git}/angle/angle@11a2d27f32dd3ad3c59137e7769b543f102a2465',
+    'url': '{chromium_git}/angle/angle@a339585e1a23420d9a8ff40c829f10490262dd52',
     'condition': 'dawn_standalone',
   },
 
@@ -204,7 +204,7 @@ deps = {
   },
 
   'third_party/dxc': {
-    'url': '{chromium_git}/external/github.com/microsoft/DirectXShaderCompiler@1f162e2230158e8b3d6c70ea31817c1a90a2de22',
+    'url': '{chromium_git}/external/github.com/microsoft/DirectXShaderCompiler@130877392c263888ef06bab768856d3dab1f1c9a',
   },
 
   'third_party/dxheaders': {
